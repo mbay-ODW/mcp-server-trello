@@ -1,9 +1,10 @@
 name: Publish to NPM
 
+# DISABLED in fork: this workflow publishes to NPM as the upstream
+# package name and would either fail with 403 or accidentally publish
+# a fork build under the upstream name. Manual trigger only.
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   publish-npm:

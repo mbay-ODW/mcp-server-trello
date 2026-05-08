@@ -1,11 +1,12 @@
 name: Publish to MCP Registry
 
+# DISABLED in fork: this workflow attempts to publish the upstream
+# `io.github.delorenj/mcp-server-trello` package to the official MCP
+# registry, which we cannot do from a fork (HTTP 403). Kept on disk
+# so a future upstream merge does not need a conflict resolution;
+# manual trigger only via the Actions UI.
 on:
-  release:
-    types: [published]
-  push:
-    branches: [main]
-    paths: ['server.json', 'package.json']
+  workflow_dispatch:
 
 jobs:
   publish:
