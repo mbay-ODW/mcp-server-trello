@@ -1,0 +1,76 @@
+# Traefik dynamic config – mirrors Authelia's OAuth/OIDC endpoints under
+# the trello-mcp host so Claude.ai can discover them via same-origin
+# /.well-known/* lookups. Drop this file into Traefik's file-provider
+# directory (e.g. /etc/traefik/dynamic/) and reload.
+#
+# Replace `trello-mcp.example.com` with your actual host.
+#
+# Same convention as the sibling repos: hero-mcp, paperless-mcp,
+# portainer-mcp.
+
+http:
+  middlewares:
+    rewrite-authorize-trello:
+      replacePath:
+        path: "/api/oidc/authorization"
+
+  routers:
+    trello-mcp-authorize:
+      rule: "Host(`trello-mcp.example.com`) && PathPrefix(`/authorize`)"
+      entrypoints: [websecure]
+      service: authelia-oidc
+      middlewares: [rewrite-authorize-trello]
+      tls:
+        certResolver: mydnschallenge
+
+    trello-mcp-root:
+      rule: "Host(`trello-mcp.example.com`) && Path(`/`)"
+      entrypoints: [websecure]
+      service: authelia-oidc
+      tls:
+        certResolver: mydnschallenge
+
+    trello-mcp-oidc:
+      rule: "Host(`trello-mcp.example.com`) && PathPrefix(`/api/oidc`)"
+      entrypoints: [websecure]
+      service: authelia-oidc
+      tls:
+        certResolver: mydnschallenge
+
+    trello-mcp-api:
+      rule: "Host(`trello-mcp.example.com`) && PathPrefix(`/api`)"
+      entrypoints: [websecure]
+      service: authelia-oidc
+      tls:
+        certResolver: mydnschallenge
+
+    trello-mcp-consent:
+      rule: "Host(`trello-mcp.example.com`) && PathPrefix(`/consent`)"
+      entrypoints: [websecure]
+      service: authelia-oidc
+      tls:
+        certResolver: mydnschallenge
+
+    trello-mcp-static:
+      rule: "Host(`trello-mcp.example.com`) && PathPrefix(`/static`)"
+      entrypoints: [websecure]
+      service: authelia-oidc
+      tls:
+        certResolver: mydnschallenge
+
+    trello-mcp-wellknown:
+      rule: "Host(`trello-mcp.example.com`) && PathPrefix(`/.well-known`)"
+      entrypoints: [websecure]
+      service: authelia-oidc
+      tls:
+        certResolver: mydnschallenge
+
+  # Shared Authelia OIDC service – defined here for completeness, but
+  # if you already define `authelia-oidc` in another file (e.g. the hero
+  # or paperless mirror), drop this `services` block to avoid Traefik
+  # logging "service already defined" warnings.
+  services:
+    authelia-oidc:
+      loadBalancer:
+        servers:
+          - url: "http://authelia:9091"

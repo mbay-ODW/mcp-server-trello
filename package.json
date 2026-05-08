@@ -25,9 +25,11 @@
   "homepage": "https://github.com/delorenj/mcp-server-trello#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.24.3",
+    "@types/express": "^5.0.6",
     "axios": "^1.13.2",
-    "https-proxy-agent": "^7.0.6",
+    "express": "^5.2.1",
     "form-data": "^4.0.5",
+    "https-proxy-agent": "^7.0.6",
     "mcp-evals": "^1.0.18",
     "zod": "^3.25.76"
   },

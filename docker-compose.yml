@@ -1,0 +1,41 @@
+services:
+  trello-mcp:
+    image: ghcr.io/mbay-odw/mcp-server-trello:latest
+    container_name: trello-mcp
+    restart: unless-stopped
+    environment:
+      # Trello API credentials – generate at https://trello.com/app-key
+      - TRELLO_API_KEY=${TRELLO_API_KEY}
+      - TRELLO_TOKEN=${TRELLO_TOKEN}
+      - TRELLO_BOARD_ID=${TRELLO_BOARD_ID:-}
+      # HTTP transport
+      - MCP_TRANSPORT=http
+      - PORT=3000
+      # Auth – static fallback Bearer token (Claude Desktop / direct API)
+      - MCP_API_KEY=${MCP_API_KEY}
+      # Authelia OIDC token introspection (Claude.ai OAuth flow)
+      - OIDC_INTROSPECTION_URL=${OIDC_INTROSPECTION_URL:-http://authelia:9091/api/oidc/introspection}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-trello-mcp}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
+      # Logging level: error | warn | info (default) | debug | trace
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    expose:
+      - "3000"
+    # Single Host(...) router – all paths under trello-mcp.${DOMAIN} go to
+    # this container, including /.well-known/* if the file-provider mirror
+    # is in use. Same pattern as paperless-mcp / portainer-mcp.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.trello-mcp.rule=Host(`trello-mcp.${DOMAIN}`)"
+      - "traefik.http.routers.trello-mcp.entrypoints=websecure"
+      - "traefik.http.routers.trello-mcp.tls=true"
+      - "traefik.http.routers.trello-mcp.tls.certresolver=mydnschallenge"
+      - "traefik.http.routers.trello-mcp.middlewares=middlewares-rate-limit@file,middlewares-secure-headers@file"
+      - "traefik.http.services.trello-mcp.loadbalancer.server.port=3000"
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true

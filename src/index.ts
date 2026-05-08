@@ -5,10 +5,26 @@ import { z } from 'zod';
 import { TrelloClient } from './trello-client.js';
 import { TrelloHealthEndpoints, HealthEndpointSchemas } from './health/health-endpoints.js';
 
-class TrelloServer {
+export class TrelloServer {
   private server: McpServer;
   private trelloClient: TrelloClient;
   private healthEndpoints: TrelloHealthEndpoints;
+
+  /** The underlying MCP server – exposed so alternative transports
+   *  (Streamable-HTTP / SSE, see ./http-server.ts) can call
+   *  `server.connect(transport)` themselves. */
+  get mcpServer(): McpServer {
+    return this.server;
+  }
+
+  /** Lazy-load Trello config (board metadata, label/list cache).
+   *  Mirrors what `run()` does for the stdio path so the HTTP entry
+   *  point can warm the cache identically. */
+  async loadTrelloConfig(): Promise<void> {
+    await this.trelloClient.loadConfig().catch(() => {
+      // Continue with default config if loading fails.
+    });
+  }
 
   constructor() {
     const apiKey = process.env.TRELLO_API_KEY;
@@ -1565,7 +1581,27 @@ class TrelloServer {
   }
 }
 
-const server = new TrelloServer();
-server.run().catch(() => {
-  // Silently handle errors to avoid interfering with MCP protocol
-});
+// Entry point dispatcher. Defaults to stdio so existing Claude Desktop
+// configs keep working; set MCP_TRANSPORT=http (or use --http) to expose
+// Streamable-HTTP + SSE over HTTP for self-hosted Claude.ai connectors.
+const _trelloServer = new TrelloServer();
+const _wantHttp =
+  process.env.MCP_TRANSPORT === 'http' ||
+  process.env.MCP_TRANSPORT === 'sse' ||
+  process.argv.includes('--http');
+
+if (_wantHttp) {
+  // Lazy import so the stdio path stays free of express + http server deps
+  // during the typical local-CLI use case.
+  import('./http-server.js')
+    .then(({ runHttp }) => runHttp(_trelloServer))
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to start HTTP transport:', err);
+      process.exit(1);
+    });
+} else {
+  _trelloServer.run().catch(() => {
+    // Silently handle errors to avoid interfering with MCP protocol
+  });
+}

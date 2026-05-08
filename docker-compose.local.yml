@@ -1,0 +1,27 @@
+# Local development stack – binds to 127.0.0.1 only, no Traefik, no
+# Authelia, no TLS. Reads Trello credentials from a local .env.
+#
+# Usage:
+#   cp example.env .env   # set TRELLO_API_KEY + TRELLO_TOKEN at minimum
+#   docker compose -f docker-compose.local.yml up
+#
+# Connect from Claude Desktop with:
+#   {"mcpServers": {"trello-local": {"url": "http://localhost:8006/sse"}}}
+#
+# Auth is intentionally disabled – do NOT expose this port to the network.
+services:
+  trello-mcp:
+    image: ghcr.io/mbay-odw/mcp-server-trello:latest
+    container_name: trello-mcp-local
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - MCP_TRANSPORT=http
+      - PORT=3000
+      # Trello credentials
+      - TRELLO_API_KEY=${TRELLO_API_KEY}
+      - TRELLO_TOKEN=${TRELLO_TOKEN}
+      - TRELLO_BOARD_ID=${TRELLO_BOARD_ID:-}
+      # Auth deliberately not set → server passes every request through.
+    ports:
+      - "127.0.0.1:8006:3000"
